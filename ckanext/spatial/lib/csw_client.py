@@ -8,6 +8,12 @@ import logging
 from owslib.etree import etree
 from owslib.fes import PropertyIsEqualTo, SortBy, SortProperty
 
+try:
+    # Python 2: "unicode" is built-in
+    unicode
+except NameError:
+    unicode = str
+
 log = logging.getLogger(__name__)
 
 class CswError(Exception):
@@ -70,6 +76,7 @@ class CswService(OwsService):
     def __init__(self, endpoint=None):
         super(CswService, self).__init__(endpoint)
         self.sortby = SortBy([SortProperty('dc:identifier')])
+        self.sortby = None
 
     def getrecords(self, qtype=None, keywords=[],
                    typenames="csw:Record", esn="brief",
@@ -95,7 +102,6 @@ class CswService(OwsService):
         if csw.exceptionreport:
             err = 'Error getting records: %r' % \
                   csw.exceptionreport.exceptions
-            #log.error(err)
             raise CswError(err)
         return [self._xmd(r) for r in list(csw.records.values())]
 
@@ -128,7 +134,6 @@ class CswService(OwsService):
             if csw.exceptionreport:
                 err = 'Error getting identifiers: %r' % \
                       csw.exceptionreport.exceptions
-                #log.error(err)
                 raise CswError(err)
 
             if matches == 0:
@@ -166,7 +171,6 @@ class CswService(OwsService):
         if csw.exceptionreport:
             err = 'Error getting record by id: %r' % \
                   csw.exceptionreport.exceptions
-            #log.error(err)
             raise CswError(err)
         if not csw.records:
             return
@@ -178,13 +182,13 @@ class CswService(OwsService):
         md = csw._exml.find("/{http://www.isotc211.org/2005/gmd}MD_Metadata")
         mdtree = etree.ElementTree(md)
         try:
-            record["xml"] = etree.tostring(mdtree, pretty_print=True, encoding=str)
+            record["xml"] = etree.tostring(mdtree, pretty_print=True, encoding=unicode)
         except TypeError:
             # API incompatibilities between different flavours of elementtree
             try:
-                record["xml"] = etree.tostring(mdtree, pretty_print=True, encoding=str)
+                record["xml"] = etree.tostring(mdtree, pretty_print=True, encoding=unicode)
             except AssertionError:
-                record["xml"] = etree.tostring(md, pretty_print=True, encoding=str)
+                record["xml"] = etree.tostring(md, pretty_print=True, encoding=unicode)
 
         record["xml"] = '<?xml version="1.0" encoding="UTF-8"?>\n' + record["xml"]
         record["tree"] = mdtree
