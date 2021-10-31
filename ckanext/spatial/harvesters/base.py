@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 import six
 from six.moves.urllib.parse import urlparse
 from six.moves.urllib.request import urlopen
@@ -205,25 +208,48 @@ class SpatialHarvester(HarvesterBase):
         :returns: A dataset dictionary (package_dict)
         :rtype: dict
         '''
-
+        log.warning("hier bin ich{}".format(iso_values))
+        # hier geht es richtig los
         tags = []
-
+        '''
         if 'tags' in iso_values:
             do_clean = self.source_config.get('clean_tags')
             tags_val = [munge_tag(tag) if do_clean else tag[:100] for tag in iso_values['tags']]
             tags = [{'name': tag} for tag in tags_val]
-
+        '''
         # Add default_tags from config
         default_tags = self.source_config.get('default_tags', [])
         if default_tags:
             for tag in default_tags:
                 tags.append({'name': tag})
-
+        
+        # das ist von mir noch dazu gekommen! auch die keyword_koko
+        data_new = iso_values['keyword_ko']
+        for tag in data_new:
+            tags.append({'name': tag})
+        
+        log.debug("hier bin ich mit den tags{}".format(tags))
+        # TODO: adding all posible values from geoserver + get theme from inspire
         package_dict = {
             'title': iso_values['title'],
             'notes': iso_values['abstract'],
             'tags': tags,
             'resources': [],
+            'theme': iso_values['keyword-inspire-theme'],
+            #'tag_string': iso_values['keywords'],
+            'conforms_to': iso_values['spatial-reference-system'],
+            'spatial_resolution': iso_values['spatial-resolution'],
+            'spatial_resolution_type': iso_values['spatial-resolution-units'],
+            'temporal_start': "2021-08-01",
+            'temporal_end': "2021-08-22",
+            # nicht ableitbar oder noch nicht gebraucht
+            #'documentation': "http://hartcodiert.de",
+            #'alternate_identifier': "http://hartcodiert.de",
+            #'url': "http://hartcodiert.de",
+            #'is_version_of': "daten_schema",
+            #'related_resource': "daten_schema",
+            #'was_derived_from': "http://hartcodiert.de",
+            #'temporal_resolution': "PY1",
         }
 
         # We need to get the owner organization (if any) from the harvest
@@ -274,29 +300,35 @@ class SpatialHarvester(HarvesterBase):
             extras['resource-type'] = iso_values['resource-type'][0]
         else:
             extras['resource-type'] = ''
-
+        
         extras['licence'] = iso_values.get('use-constraints', '')
-
+        
         def _extract_first_license_url(licences):
             for licence in licences:
                 o = urlparse(licence)
                 if o.scheme and o.netloc:
                     return licence
             return None
-
+        
         if len(extras['licence']):
             license_url_extracted = _extract_first_license_url(extras['licence'])
             if license_url_extracted:
                 extras['licence_url'] = license_url_extracted
-
-
+        
+        
+        #context = {'model': model, 'session': model.Session, 'user': self._get_user_name()}
+        #log.debug("Das ist eine List{}".format(p.toolkit.get_action('license_list')(context, {})))
+        
         # Metadata license ID check for package
+        # hier koennte ich die IDs noch hinzufuegen
         use_constraints = iso_values.get('use-constraints')
+        log.debug("Wir befinden uns bei den Lizenzen: {}".format(iso_values.get('use-constraints')))
+        '''
         if use_constraints:
 
             context = {'model': model, 'session': model.Session, 'user': self._get_user_name()}
             license_list = p.toolkit.get_action('license_list')(context, {})
-
+            
             for constraint in use_constraints:
                 package_license = None
 
@@ -308,11 +340,14 @@ class SpatialHarvester(HarvesterBase):
                 if package_license:
                     package_dict['license_id'] = package_license
                     break
-
-
-        extras['access_constraints'] = iso_values.get('limitations-on-public-access', '')
-
-        # Grpahic preview
+        
+        #extras['access_constraints'] = iso_values.get('limitations-on-public-access', '')
+        '''
+        # habe ich momentan aus kommentiert da sonst nicht zwei Ressourcen
+        package_dict['license_id'] = extras['licence_url']
+        #-------------------------------
+        
+        # Graphic preview
         browse_graphic = iso_values.get('browse-graphic')
         if browse_graphic:
             browse_graphic = browse_graphic[0]
@@ -326,7 +361,7 @@ class SpatialHarvester(HarvesterBase):
         for key in ['temporal-extent-begin', 'temporal-extent-end']:
             if len(iso_values[key]) > 0:
                 extras[key] = iso_values[key][0]
-
+        '''
         # Save responsible organization roles
         if iso_values['responsible-organisation']:
             parties = {}
@@ -336,8 +371,23 @@ class SpatialHarvester(HarvesterBase):
                         parties[party['organisation-name']].append(party['role'])
                 else:
                     parties[party['organisation-name']] = [party['role']]
-            extras['responsible-party'] = [{'name': k, 'roles': v} for k, v in parties.items()]
-
+                    package_dict['contact_name'] = party['organisation-name']
+                if party['position-name'] in parties:
+                    package_dict['contact_uri'] = party['position-name']
+            # TODO: Aenderung des Contacts
+            #package_dict['contact_uri'] = "Test.de"
+            #package_dict['contact_name'] = "TU Dresden"
+            #extras['responsible-party'] = [{'name': k, 'roles': v} for k, v in parties.items()]
+        '''
+        # Save responsible organization roles
+        if iso_values['responsible-organisation']:
+            for party in iso_values['responsible-organisation']:
+                if party['organisation-name']:
+                    package_dict['contact_name'] = party['organisation-name']
+                if party['position-name']:
+                    package_dict['contact_uri'] = party['position-name']
+                
+                
         if len(iso_values['bbox']) > 0:
             bbox = iso_values['bbox'][0]
             extras['bbox-east-long'] = bbox['east']
@@ -368,8 +418,8 @@ class SpatialHarvester(HarvesterBase):
                     extent_string = self.extent_template.substitute(
                         xmin=xmin, ymin=ymin, xmax=xmax, ymax=ymax
                     )
-
-                extras['spatial'] = extent_string.strip()
+                package_dict['spatial'] = extent_string.strip()
+                #extras['spatial'] = extent_string.strip()
         else:
             log.debug('No spatial extent defined for this object')
 
@@ -611,7 +661,7 @@ class SpatialHarvester(HarvesterBase):
                 package_id = p.toolkit.get_action('package_create')(context, package_dict)
                 log.info('Created new package %s with guid %s', package_id, harvest_object.guid)
             except p.toolkit.ValidationError as e:
-                self._save_object_error('Validation Error: %s' % six.text_type(e.error_summary), harvest_object, 'Import')
+                self._save_object_error('Validation Error ckanext-spatial harvester base: %s' % six.text_type(e.error_summary), harvest_object, 'Import')
                 return False
 
         elif status == 'change':
@@ -663,7 +713,6 @@ class SpatialHarvester(HarvesterBase):
         model.Session.commit()
 
         return True
-    ##
 
     def _is_wms(self, url):
         '''
