@@ -13,10 +13,16 @@ from lxml import etree
 from pprint import pprint
 
 from ckan import model
-from ckanext.spatial.lib import save_package_extent
-from ckanext.spatial.lib.reports import validation_report
-from ckanext.spatial.harvesters import SpatialHarvester
-from ckanext.spatial.model import ISODocument
+from ckan.model.package_extra import PackageExtra
+
+try:
+    from ckanext.spatial.lib import save_package_extent
+    from ckanext.spatial.lib.reports import validation_report
+    from ckanext.spatial.harvesters import SpatialHarvester
+    from ckanext.spatial.model import ISODocument
+except ImportError:
+    # ckanext-harvest not loaded
+    pass
 
 from ckantoolkit import config
 
@@ -184,11 +190,11 @@ def get_harvest_object_content(id):
         return None
 
 
-def _transform_to_html(content, xslt_package=None, xslt_path=None):
+def transform_to_html(content, xslt_package=None, xslt_path=None):
 
     xslt_package = xslt_package or __name__
     xslt_path = xslt_path or \
-        '../templates/ckanext/spatial/gemini2-html-stylesheet.xsl'
+        'templates/ckanext/spatial/gemini2-html-stylesheet.xsl'
 
     # optimise -- read transform only once and compile rather
     # than at each request
@@ -203,3 +209,16 @@ def _transform_to_html(content, xslt_package=None, xslt_path=None):
 
     return result
 
+
+def _get_package_extras(pkg_id):
+    """Returns a list of package extras by its ID
+
+    Args:
+        pkg_id (str): an ID of package
+
+    Returns:
+        List[PackageExtra]: a list of package extras
+    """
+    return model.meta.Session.query(PackageExtra) \
+        .filter_by(package_id=pkg_id) \
+        .all()
