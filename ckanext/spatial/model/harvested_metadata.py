@@ -522,6 +522,7 @@ class ISODocument(MappedXmlDocument):
         ISOElement(
             name="spatial-reference-system",
             search_paths=[
+                "gmd:referenceSystemInfo/gmd:MD_ReferenceSystem/gmd:referenceSystemIdentifier/gmd:RS_Identifier/gmd:code/gmx:Anchor/@xlink:href",
                 "gmd:referenceSystemInfo/gmd:MD_ReferenceSystem/gmd:referenceSystemIdentifier/gmd:RS_Identifier/gmd:code/gco:CharacterString/text()",
             ],
             multiplicity="0..1",
@@ -631,10 +632,19 @@ class ISODocument(MappedXmlDocument):
             multiplicity="*"
         ),
         ISOElement(
-            name="keyword-inspire-theme",
+            name="keyword_ko",
             search_paths=[
                 "gmd:identificationInfo/gmd:MD_DataIdentification/gmd:descriptiveKeywords/gmd:MD_Keywords/gmd:keyword/gco:CharacterString/text()",
                 "gmd:identificationInfo/srv:SV_ServiceIdentification/gmd:descriptiveKeywords/gmd:MD_Keywords/gmd:keyword/gco:CharacterString/text()",
+            ],
+            multiplicity="*",
+        ),
+        ISOElement(
+            name="keyword-inspire-theme",
+            search_paths=[
+                "gmd:identificationInfo/gmd:MD_DataIdentification/gmd:descriptiveKeywords/gmd:MD_Keywords/gmd:keyword/gmx:Anchor/@xlink:href",
+                #"gmd:identificationInfo/gmd:MD_DataIdentification/gmd:descriptiveKeywords/gmd:MD_Keywords/gmd:keyword/gco:CharacterString/text()",
+                #"gmd:identificationInfo/srv:SV_ServiceIdentification/gmd:descriptiveKeywords/gmd:MD_Keywords/gmd:keyword/gco:CharacterString/text()",
             ],
             multiplicity="*",
         ),
@@ -921,15 +931,16 @@ class ISODocument(MappedXmlDocument):
                 value = locator['url']
                 break
         values['url'] = value
-
+    
     def infer_tags(self, values):
         tags = []
-        for key in ['keyword-inspire-theme', 'keyword-controlled-other']:
-            for item in values[key]:
-                if item not in tags:
-                    tags.append(item)
+        for key in (['keywords'][1:]):
+            if key['keyword']:
+                for wert in (key['keyword']):
+                    if wert not in tags:
+                        tags.append(wert)
         values['tags'] = tags
-
+        
     def infer_publisher(self, values):
         value = ''
         for responsible_party in values['responsible-organisation']:
