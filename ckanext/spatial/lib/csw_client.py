@@ -2,7 +2,6 @@
 Some very thin wrapper classes around those in OWSLib
 for convenience.
 """
-import six
 import logging
 
 from owslib.etree import etree
@@ -39,7 +38,7 @@ class OwsService(object):
                 pass
             elif callable(val):
                 pass
-            elif isinstance(val, six.string_types):
+            elif isinstance(val, str):
                 md[attr] = val
             elif isinstance(val, int):
                 md[attr] = val
@@ -71,7 +70,7 @@ class CswService(OwsService):
     """
     Perform various operations on a CSW service
     """
-    from owslib.csw import CatalogueServiceWeb as _Implementation
+    from owslib.catalogue.csw2 import CatalogueServiceWeb as _Implementation
 
     def __init__(self, endpoint=None):
         super(CswService, self).__init__(endpoint)
@@ -81,7 +80,7 @@ class CswService(OwsService):
     def getrecords(self, qtype=None, keywords=[],
                    typenames="csw:Record", esn="brief",
                    skip=0, count=10, outputschema="gmd", **kw):
-        from owslib.csw import namespaces
+        from owslib.catalogue.csw2 import namespaces
         constraints = []
         csw = self._ows(**kw)
 
@@ -108,7 +107,7 @@ class CswService(OwsService):
     def getidentifiers(self, qtype=None, typenames="csw:Record", esn="brief",
                        keywords=[], limit=None, page=10, outputschema="gmd",
                        startposition=0, cql=None, **kw):
-        from owslib.csw import namespaces
+        from owslib.catalogue.csw2 import namespaces
         constraints = []
         csw = self._ows(**kw)
 
@@ -159,7 +158,7 @@ class CswService(OwsService):
             kwa["startposition"] = startposition
 
     def getrecordbyid(self, ids=[], esn="full", outputschema="gmd", **kw):
-        from owslib.csw import namespaces
+        from owslib.catalogue.csw2 import namespaces
         csw = self._ows(**kw)
         kwa = {
             "esn": esn,
